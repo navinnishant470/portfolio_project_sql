@@ -1,3 +1,4 @@
+# used dataset source https://ourworldindata.org/covid-deaths
 #creating database
 create database nav_portfolio;
 use nav_portfolio;
