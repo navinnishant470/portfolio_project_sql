@@ -1,0 +1,91 @@
+###DATA CLEANING AND DATA EXPLORATION USING ALL COSMETOLOGIST DATASET FROM TEXAS DEPARTMENT OF LICENSING & REGULATION
+#creating database and table
+create database datacleaning;
+use datacleaning;
+CREATE TABLE cosmo(LICENSE_TYPE	VARCHAR(60),
+LICENSE_NUMBER	INT PRIMARY KEY ,
+LICENSE_EXPIRATION_DATE	VARCHAR(60),
+COUNTY VARCHAR(60),
+`NAME`	VARCHAR(60),
+MAILING_ADDRESS_LINE1 VARCHAR(60),
+MAILING_ADDRESS_LINE2	VARCHAR(60),
+MAILING_ADDRESS_CITY_STATE_ZIP VARCHAR(60),
+PHONE_NUMBER	INT ,
+BUSINESS_NAME	VARCHAR(60),
+BUSINESS_ADDRESS_LINE1	VARCHAR(60),
+BUSINESS_ADDRESS_LINE2	VARCHAR(60),
+BUSINESS_CITY_STATE_ZIP	VARCHAR(60),
+BUSINESS_COUNTY_CODE INT,
+BUSINESS_COUNTY VARCHAR(60),
+BUSINESS_ZIP	VARCHAR(60),
+BUSINESS_PHONE	VARCHAR(60),
+LICENSE_SUBTYPE	VARCHAR(60),
+CONTINUING_EDUCATION_FLAG CHAR)
+
+#loading data
+set session sql_mode =''
+select * from cosmo;
+select count( * )from cosmo
+load data infile
+'F:/ltcosmos.csv'
+into table cosmo 
+fields terminated by ','
+optionally enclosed by '"'
+lines terminated by '\n'
+ignore 1 rows
+set sql_safe_updates =0
+
+### DATA CLEANING
+#checking and standardising date format
+select LICENSE_EXPIRATION_DATE from cosmo;
+select str_to_date(LICENSE_EXPIRATION_DATE,'%m/%d/%Y')from cosmo
+update cosmo set LICENSE_EXPIRATION_DATE= str_to_date(LICENSE_EXPIRATION_DATE,'%m/%d/%Y')
+alter table cosmo modify column LICENSE_EXPIRATION_DATE date
+
+# modifying name as (first name+last name)
+select NAME from cosmo
+select * from cosmo;
+select NAME, concat(substr(NAME,instr(NAME,',')+2 ),' ',substr(NAME,1,instr(NAME,',')-1))from cosmo
+update cosmo set NAME= concat(substr(NAME,instr(NAME,',')+2 ),' ',substr(NAME,1,instr(NAME,',')-1))
+
+#modifying businessname
+select BUSINESS_NAME, concat(substr(BUSINESS_NAME,instr(BUSINESS_NAME,',')+2 ),' ',substr(BUSINESS_NAME,1,instr(BUSINESS_NAME,',')-1))from cosmo
+update cosmo set BUSINESS_NAME=concat(substr(BUSINESS_NAME,instr(BUSINESS_NAME,',')+2 ),' ',substr(BUSINESS_NAME,1,instr(BUSINESS_NAME,',')-1))
+
+#dealing with zero in phone no.
+update cosmo set PHONE_NUMBER = null where PHONE_NUMBER=0
+
+#checking for any duplicate data
+select LICENSE_NUMBER,NAME from cosmo group by LICENSE_NUMBER,NAME having count(*)>1
+select LICENSE_NUMBER,NAME from (select LICENSE_NUMBER,NAME, row_number() over(partition by LICENSE_NUMBER,NAME order by LICENSE_NUMBER)
+ as rownum from cosmo)as duplicatedata where rownum!=1
+ #these two queries show there are no duplicate values.
+
+#remove unused columns
+select * from cosmo
+alter table cosmo
+ drop column  MAILING_ADDRESS_LINE1, drop column MAILING_ADDRESS_LINE2, drop column MAILING_ADDRESS_CITY_STATE_ZIP, 
+ drop column BUSINESS_ADDRESS_LINE1, drop column BUSINESS_ADDRESS_LINE2, drop column BUSINESS_CITY_STATE_ZIP, drop column BUSINESS_ZIP,
+ drop column BUSINESS_PHONE
+ 
+ ###DATA EXPORATION
+ 
+ # License type of top 3 maximum no. of license holders
+ select LICENSE_TYPE, count(*) from cosmo group by LICENSE_TYPE order by count(*) desc limit 3
+ # result is Cosmetology Operator >Cosmetology Manicurist> Cosmetology Esthetician
+ 
+ # no. of licenses expirition yearwise
+ select * from cosmo
+ select year(LICENSE_EXPIRATION_DATE),count(*)from cosmo group by year(LICENSE_EXPIRATION_DATE) order by count(*) desc
+ #result is 2024>2023>2025 is the year of license expiration
+ 
+ #no of people continuing education vs license type
+ select count(*), LICENSE_TYPE from cosmo where CONTINUING_EDUCATION_FLAG="y" group by LICENSE_TYPE
+ #maximum '6490', 'Cosmetology Operator' are continuing education
+
+#no of license county wise
+select COUNTY, count(*) from cosmo group by COUNTY
+#maximum license is issued in DALLAS>EL PASO> LLANO
+
+#list of people whose license has already expired by 1st jan 2023
+select NAME from cosmo where LICENSE_EXPIRATION_DATE<'2023-01-01'
