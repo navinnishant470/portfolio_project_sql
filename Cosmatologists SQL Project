@@ -74,7 +74,7 @@ alter table cosmo
  select LICENSE_TYPE, count(*) from cosmo group by LICENSE_TYPE order by count(*) desc limit 3
  # result is Cosmetology Operator >Cosmetology Manicurist> Cosmetology Esthetician
  
- # no. of licenses expirition yearwise
+ # no. of licenses expiration yearwise
  select * from cosmo
  select year(LICENSE_EXPIRATION_DATE),count(*)from cosmo group by year(LICENSE_EXPIRATION_DATE) order by count(*) desc
  #result is 2024>2023>2025 is the year of license expiration
